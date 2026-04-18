@@ -1,0 +1,88 @@
+# config.toml — веса и пороги стратегии
+
+[phases]
+early_end = 50
+growth_end = 250
+harvest_end = 500
+
+[scoring.cell]
+base_normal = 1000.0
+base_boosted = 1500.0
+boost_factor_early = 1.2
+boost_factor_growth = 1.5
+boost_factor_harvest = 1.5
+boost_factor_endgame = 2.0
+
+[scoring.risk]
+beaver_in_range = 300.0
+storm_in_path = 150.0
+enemy_nearby = 200.0
+
+[scoring.bonus]
+nearby_boost_weight = 100.0
+
+[scoring.penalty]
+distance_from_main = 5.0
+
+[urgency]
+critical_repair = 1.0
+unfinished_construction = 0.7
+new_build_boost = 0.5
+new_build_normal = 0.3
+beaver_hunt = 0.6
+maintenance_repair = 0.2
+
+[upgrades.priority_order]
+# Последовательность из 15 покупок (max_points = 15). Список точно по task.md:
+#   repair_power   max 3
+#   max_hp         max 5
+#   settlement_limit max 10
+#   signal_range   max 10 (VQ3 CONFIRMED by server response)
+#   vision_range   max 5
+#   decay_mitigation max 3
+#   earthquake_mitigation max 3
+#   beaver_damage_mitigation max 5
+sequence = [
+    "repair_power",
+    "settlement_limit",
+    "settlement_limit",
+    "settlement_limit",
+    "repair_power",
+    "settlement_limit",
+    "vision_range",
+    "settlement_limit",
+    "settlement_limit",
+    "repair_power",
+    "signal_range",
+    "settlement_limit",
+    "vision_range",
+    "settlement_limit",
+    "settlement_limit",
+]
+
+[beaver]
+min_attackers = 3
+safety_time_budget_frac = 0.5
+opportunity_cost_per_turn = 50.0
+
+[sabotage]
+allowed_in_early = false
+allowed_in_growth = false
+allowed_in_harvest = true
+only_endgame_vs_leader = true
+
+[safety]
+# Порог «пора переносить ЦУ»: ≤ этого числа ходов до 100% на клетке ЦУ.
+# 10 — relocate когда клетка на ~50%. Бывший ЦУ (обычная плантация) живёт
+# ещё 10 ходов, за это время стройки вокруг него успевают дозреть — сеть
+# не рвётся каскадом после его смерти (см. «collapsed due to isolation»).
+main_critical_completion_turns = 10
+main_critical_hp_fraction = 0.2
+min_buffer_before_limit = 1
+
+[timing]
+plan_budget_ms = 500
+sleep_safety_margin_sec = 0.05
+
+[logging]
+per_turn_json = true

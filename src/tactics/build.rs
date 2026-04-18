@@ -324,7 +324,14 @@ pub fn generate_build_tasks(
             .unwrap_or(std::cmp::Ordering::Equal)
             .then_with(|| (pa.x, pa.y).cmp(&(pb.x, pb.y)))
     });
+
+    let mut current_projected = la.projected;
+
     for (cell, score) in candidates.into_iter().take(slots) {
+        if current_projected >= la.limit && la.oldest_is_main {
+            break;
+        }
+
         let urgency = if is_boosted(cell) {
             cfg.urgency.new_build_boost
         } else {
@@ -337,6 +344,7 @@ pub fn generate_build_tasks(
             urgency,
             required_effort: (50.0 / params.cs as f64).ceil(),
         });
+        current_projected += 1;
     }
 
     tasks

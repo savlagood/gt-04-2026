@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PlayerResponse {
     pub turn_no: Option<u32>,
@@ -26,7 +26,7 @@ pub struct PlayerResponse {
     pub meteo_forecasts: Vec<MeteoForecastDTO>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PlantationDTO {
     pub id: String,
@@ -41,7 +41,7 @@ pub struct PlantationDTO {
 
 /// EnemyPlantationDTO — по openapi.yml содержит только hp/id/position.
 /// Никакого immunityUntilTurn тут нет (Fix 2).
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EnemyPlantationDTO {
     pub id: String,
@@ -49,14 +49,14 @@ pub struct EnemyPlantationDTO {
     pub hp: i32,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ConstructionDTO {
     pub position: [i32; 2],
     pub progress: i32,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PlayerBeaverDTO {
     pub id: String,
@@ -64,7 +64,7 @@ pub struct PlayerBeaverDTO {
     pub hp: i32,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TerraformedCellDTO {
     pub position: [i32; 2],
@@ -72,7 +72,7 @@ pub struct TerraformedCellDTO {
     pub turns_until_degradation: Option<i32>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MeteoForecastDTO {
     /// "earthquake" | "sandstorm" | ...
@@ -92,7 +92,7 @@ pub struct MeteoForecastDTO {
     pub radius: Option<i32>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PlantationUpgradesState {
     pub points: i32,
@@ -103,7 +103,7 @@ pub struct PlantationUpgradesState {
     pub tiers: Vec<PlantationUpgradeTierItemDTO>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PlantationUpgradeTierItemDTO {
     pub name: String,
@@ -135,7 +135,7 @@ pub struct PublicError {
     pub errors: Vec<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct LogMessage {
     pub time: String,
     pub message: String,

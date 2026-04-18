@@ -7,4 +7,5 @@ pub mod metrics;
 pub mod model;
 pub mod planner;
 pub mod predict;
+pub mod proxy;
 pub mod tactics;

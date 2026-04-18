@@ -1,5 +1,6 @@
 use std::fs;
 use std::path::PathBuf;
+use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
 
 use datssol_bot::api::{ApiClient, Server};
@@ -9,6 +10,7 @@ use datssol_bot::metrics::Metrics;
 use datssol_bot::model::{memory::Memory, params::DerivedParams, state::GameState};
 use datssol_bot::planner::{plan_turn, tasks::TaskKind, TurnPlan};
 use datssol_bot::predict::predict_hp_next_turn;
+use datssol_bot::proxy::{SharedArena, SharedLogs};
 use tracing_subscriber::EnvFilter;
 
 fn init_tracing() {
@@ -42,6 +44,16 @@ fn main() -> anyhow::Result<()> {
     let client = ApiClient::new(server, token);
     let mut memory = Memory::default();
     let mut metrics = Metrics::default();
+
+    let shared_arena: SharedArena = Arc::new(RwLock::new(None));
+    let shared_logs: SharedLogs = Arc::new(RwLock::new(Vec::new()));
+    if let Ok(port_str) = std::env::var("DATSSOL_PROXY_PORT") {
+        if let Ok(port) = port_str.parse::<u16>() {
+            let arena = Arc::clone(&shared_arena);
+            let logs = Arc::clone(&shared_logs);
+            std::thread::spawn(move || datssol_bot::proxy::start(port, arena, logs));
+        }
+    }
 
     // Экспоненциальный backoff на подряд идущие 429:
     //   1 → 1.5 сек, 2 → 3, 3 → 6, 4+ → 12 (cap).
@@ -100,6 +112,7 @@ fn main() -> anyhow::Result<()> {
             }
         };
         let got_arena_at = Instant::now();
+        *shared_arena.write().unwrap() = Some(resp.clone());
 
         // 2. Normalize. Может упасть, если turn_no=None (до регистрации).
         let state = match GameState::from_api(resp) {
@@ -223,6 +236,7 @@ fn main() -> anyhow::Result<()> {
         if metrics.turns_processed % 30 == 0 {
             match client.get_logs() {
                 Ok(logs) => {
+                    *shared_logs.write().unwrap() = logs.clone();
                     let path = log_dir.join("server_events.jsonl");
                     if let Ok(mut f) = fs::OpenOptions::new()
                         .create(true)

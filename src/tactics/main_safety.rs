@@ -48,7 +48,7 @@ pub fn plan_relocate_main(
     // Минимум «запаса» для кандидата: его клетка не должна завершиться сама
     // в ближайшие несколько ходов. Свежая плантация имеет turns_until_complete
     // ≈ 20 (клетка 0%), что более чем достаточно.
-    let min_buffer = cfg.safety.main_critical_completion_turns * 2 + 1;
+    let min_buffer = cfg.safety.main_critical_completion_turns;
 
     let candidates: Vec<&Plantation> = state
         .plantations

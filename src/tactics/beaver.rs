@@ -42,11 +42,13 @@ pub fn plan_beaver_kill(
     }
     let turns_to_kill = ((b.hp as f64) / (net_dps as f64)).ceil() as u32;
 
-    // Fix 12: выживаемость. Минимальный HP среди атакующих делится на урон
-    // от бобра. Если атакующих добьют раньше — отказываемся.
-    let min_hp = in_range.iter().map(|p| p.hp).min().unwrap_or(0);
+    // Fix 12: выживаемость. Суммарный HP пула делим на суммарный урон в ход
+    // (бобёр бьёт всех равномерно). Проверка по min дала бы false-negative при
+    // 3 атакующих с 30 HP каждый — они суммарно держат удар нормально.
     let bd = params.beaver_dmg.max(1);
-    let turns_survive = (min_hp / bd) as u32;
+    let total_hp: i32 = in_range.iter().map(|p| p.hp).sum();
+    let total_dmg_per_turn = (in_range.len() as i32) * bd;
+    let turns_survive = (total_hp / total_dmg_per_turn.max(1)) as u32;
     if turns_survive < turns_to_kill {
         return None;
     }

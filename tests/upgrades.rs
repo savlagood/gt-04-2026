@@ -40,28 +40,28 @@ fn no_points_none() {
 
 #[test]
 fn first_in_priority() {
-    // Первый в priority_order — repair_power. У нас есть points и current < max.
+    // Первый в priority_order — max_hp. У нас есть points и current < max.
     let s = state_with_upgrades(
         1,
         vec![
-            ("repair_power", 0, 3),
+            ("max_hp", 0, 5),
             ("settlement_limit", 0, 10),
-            ("vision_range", 0, 5),
+            ("signal_range", 0, 10),
         ],
     );
     assert_eq!(
         choose_upgrade(&s, &Config::default_embedded()).as_deref(),
-        Some("repair_power")
+        Some("max_hp")
     );
 }
 
 #[test]
 fn skip_maxed_and_take_next() {
-    // repair_power на max → пойти к следующему в sequence (settlement_limit).
+    // max_hp на max → пойти к следующему в sequence (settlement_limit).
     let s = state_with_upgrades(
         1,
         vec![
-            ("repair_power", 3, 3),
+            ("max_hp", 5, 5),
             ("settlement_limit", 0, 10),
         ],
     );

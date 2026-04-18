@@ -7,6 +7,7 @@ use crate::geom::{adjacent4, chebyshev, in_bounds};
 use crate::model::memory::Memory;
 use crate::model::params::DerivedParams;
 use crate::model::state::{GameState, Plantation, Pos};
+use crate::planner::assign_tasks;
 use crate::planner::tasks::{Assignment, Task, TaskKind, TurnPlan};
 use crate::planner::tasks::Phase;
 use crate::tactics::build::generate_build_tasks;
@@ -34,7 +35,7 @@ pub fn plan_turn(state: &GameState, memory: &Memory, cfg: &Config) -> TurnPlan {
             .unwrap_or(std::cmp::Ordering::Equal)
     });
 
-    let mut assignments = assign_tasks_mvp(&tasks, state, &params);
+    let mut assignments = assign_tasks(tasks, state, &params);
 
     // Апгрейд — покупаем каждый ход, если есть очки.
     let upgrade = choose_upgrade(state, cfg);
@@ -53,43 +54,6 @@ pub fn plan_turn(state: &GameState, memory: &Memory, cfg: &Config) -> TurnPlan {
         upgrade,
         relocate_main,
     }
-}
-
-/// MVP-назначение: один автор → одна задача. Автор — ближайшая useful
-/// плантация в AR от цели. Реле не используем (автор = relay).
-///
-/// Для `TaskKind::Repair` автор не может быть целью ремонта (task.md:
-/// «Плантация не может ремонтировать саму себя»).
-fn assign_tasks_mvp(
-    tasks: &[Task],
-    state: &GameState,
-    params: &DerivedParams,
-) -> Vec<Assignment> {
-    let mut used_authors: HashSet<String> = HashSet::new();
-    let mut out = Vec::new();
-    for t in tasks {
-        let best = state
-            .useful_authors(params)
-            .filter(|p| !used_authors.contains(&p.id))
-            .filter(|p| chebyshev(p.pos, t.target) <= params.ar)
-            .filter(|p| match &t.kind {
-                TaskKind::Repair { target_id } => &p.id != target_id,
-                _ => true,
-            })
-            .min_by_key(|p| chebyshev(p.pos, t.target));
-        if let Some(p) = best {
-            used_authors.insert(p.id.clone());
-            out.push(Assignment {
-                author_id: p.id.clone(),
-                author_pos: p.pos,
-                relay_pos: p.pos,
-                target_pos: t.target,
-                kind: t.kind.clone(),
-                expected_effect: t.kind.base_stat(params),
-            });
-        }
-    }
-    out
 }
 
 /// Fix 8: fallback при пустом плане.

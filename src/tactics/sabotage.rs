@@ -1,11 +1,13 @@
 #![allow(dead_code)]
 
 use crate::config::Config;
-use crate::geom::{cell_base_points, chebyshev};
+use crate::geom::cell_base_points;
 use crate::model::memory::Memory;
 use crate::model::params::DerivedParams;
-use crate::model::state::{GameState, Plantation, Pos};
+use crate::model::state::GameState;
 use crate::planner::tasks::{Phase, Task, TaskKind};
+
+use crate::tactics::can_reach_via_any_relay;
 
 /// Фаза, на которой разрешена диверсия (по конфигу).
 fn allowed(phase: Phase, cfg: &Config) -> bool {
@@ -57,20 +59,4 @@ pub fn generate_sabotage_tasks(
         });
     }
     tasks
-}
-
-fn can_reach_via_any_relay(
-    author: &Plantation,
-    target: Pos,
-    state: &GameState,
-    params: &DerivedParams,
-) -> bool {
-    if chebyshev(author.pos, target) <= params.ar {
-        return true;
-    }
-    state.useful_authors(params).any(|r| {
-        r.id != author.id
-            && chebyshev(author.pos, r.pos) <= params.sr
-            && chebyshev(r.pos, target) <= params.ar
-    })
 }

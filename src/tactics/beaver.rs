@@ -1,11 +1,13 @@
 #![allow(dead_code)]
 
 use crate::config::Config;
-use crate::geom::{cell_base_points, chebyshev};
+use crate::geom::cell_base_points;
 use crate::model::memory::Memory;
 use crate::model::params::DerivedParams;
 use crate::model::state::{Beaver, GameState, Plantation, Pos};
 use crate::planner::tasks::{Phase, Task, TaskKind};
+
+use crate::tactics::can_reach_via_any_relay;
 
 pub struct BeaverKillPlan {
     pub attacker_positions: Vec<Pos>,
@@ -28,7 +30,7 @@ pub fn plan_beaver_kill(
 ) -> Option<BeaverKillPlan> {
     let in_range: Vec<&Plantation> = state
         .useful_authors(params)
-        .filter(|p| chebyshev(p.pos, b.pos) <= 2)
+        .filter(|p| can_reach_via_any_relay(p, b.pos, state, params))
         .collect();
     if (in_range.len() as i32) < cfg.beaver.min_attackers {
         return None;

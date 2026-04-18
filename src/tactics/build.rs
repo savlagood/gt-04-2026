@@ -216,7 +216,14 @@ pub fn score_cell_value(
     let compactness_penalty =
         chebyshev(cell, main_pos) as f64 * cfg.scoring.penalty.distance_from_main;
 
-    base * boosted_bonus - risk + bonus + compact_bonus + fragile_penalty - compactness_penalty
+    let mut main_adj_bonus = 0.0;
+    if let Some(main) = state.main() {
+        if manhattan(cell, main.pos) == 1 {
+            main_adj_bonus = 5000.0; // Priority to secure 4-adj to main for safe relocation
+        }
+    }
+
+    base * boosted_bonus - risk + bonus + compact_bonus + fragile_penalty + main_adj_bonus - compactness_penalty
 }
 
 /// Полный generator build-задач (Step 11):
@@ -253,44 +260,27 @@ pub fn generate_build_tasks(
 
     let useful_count = state.useful_authors(params).count();
 
-    // 2. Combined build strategy: task.md §Функционал позволяет нескольким
-    //    плантациям участвовать в постройке одной клетки. CS складывается
-    //    (с relay-penalty для второго и далее). 3 автора на 1 клетку
-    //    ≈ 5+4+3 = 12 progress/ход вместо 5 — строится за ~4 хода вместо 10.
-    //
-    //    Распределяем useful_authors между активными стройками round-robin,
-    //    чтобы каждая получила ~равное число «помощников». Это резко
-    //    ускоряет рост сети в первые ходы.
-    if !our_builds.is_empty() {
-        // До 2 авторов на активную стройку для ускорения, но ≥1 слот
-        // всегда резервируем для запуска новых стро ек.
-        let for_existing = if useful_count <= 1 {
-            useful_count
+    // 2. Combined build strategy:
+    // Сначала обязательно генерируем задачи для ВСЕХ наших активных строек, чтобы они не деградировали.
+    for c in &our_builds {
+        let remaining = (50 - c.progress).max(1);
+        let cell_score = score_cell_value(c.pos, state, params, cfg, phase);
+        // Если пропустить этот ход — сервер применяет DS немедленно (шаг 8).
+        // При progress ≤ DS стройка умрёт в тот же ход. Поднимаем приоритет
+        // до уровня критического ремонта, чтобы конкурировать на равных.
+        let at_risk = c.progress <= params.ds;
+        let (urgency, extra) = if at_risk {
+            (cfg.urgency.critical_repair, 100_000.0)
         } else {
-            (our_builds.len() * 2).min(useful_count - 1)
+            (cfg.urgency.unfinished_construction, 0.0)
         };
-
-        for i in 0..for_existing {
-            let c = our_builds[i % our_builds.len()];
-            let remaining = (50 - c.progress).max(1);
-            let cell_score = score_cell_value(c.pos, state, params, cfg, phase);
-            // Если пропустить этот ход — сервер применяет DS немедленно (шаг 8).
-            // При progress ≤ DS стройка умрёт в тот же ход. Поднимаем приоритет
-            // до уровня критического ремонта, чтобы конкурировать на равных.
-            let at_risk = c.progress <= params.ds;
-            let (urgency, extra) = if at_risk {
-                (cfg.urgency.critical_repair, 100_000.0)
-            } else {
-                (cfg.urgency.unfinished_construction, 0.0)
-            };
-            tasks.push(Task {
-                kind: TaskKind::Build,
-                target: c.pos,
-                utility: cell_score + extra + 2_000.0 + remaining as f64 * 10.0,
-                urgency,
-                required_effort: (remaining as f64 / params.cs as f64).ceil().max(1.0),
-            });
-        }
+        tasks.push(Task {
+            kind: TaskKind::Build,
+            target: c.pos,
+            utility: cell_score + extra + 2_000.0 + remaining as f64 * 10.0,
+            urgency,
+            required_effort: (remaining as f64 / params.cs as f64).ceil().max(1.0),
+        });
     }
 
     // 3. Лимит: если мы уже на границе и старейшая плантация — ЦУ,

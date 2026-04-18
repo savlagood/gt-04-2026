@@ -1,6 +1,7 @@
 pub mod beaver;
 pub mod build;
 pub mod main_safety;
+pub mod relay;
 pub mod repair;
 pub mod sabotage;
 pub mod upgrades;
@@ -10,6 +11,7 @@ pub use build::{
     find_buildable_cells, generate_build_tasks, generate_build_tasks_mvp, score_cell_value,
 };
 pub use main_safety::plan_relocate_main;
+pub use relay::{can_reach_via_any_relay, choose_relay, RelayChoice};
 pub use repair::generate_repair_tasks;
 pub use sabotage::generate_sabotage_tasks;
 pub use upgrades::choose_upgrade;

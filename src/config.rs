@@ -136,7 +136,7 @@ mod tests {
         assert_eq!(cfg.phases.early_end, 50);
         assert_eq!(cfg.phases.harvest_end, 500);
         assert!(!cfg.upgrades.priority_order.sequence.is_empty());
-        assert_eq!(cfg.beaver.min_attackers, 3);
+        assert_eq!(cfg.beaver.min_attackers, 2);
         assert!(cfg.logging.per_turn_json);
     }
 }

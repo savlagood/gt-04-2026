@@ -46,9 +46,7 @@ pub fn plan_relocate_main(
     }
 
     // Минимум «запаса» для кандидата: его клетка не должна завершиться сама
-    // в ближайшие несколько ходов. Свежая плантация имеет turns_until_complete
-    // ≈ 20 (клетка 0%), что более чем достаточно.
-    let min_buffer = cfg.safety.main_critical_completion_turns;
+    // раньше, чем текущая клетка ЦУ.
 
     let candidates: Vec<&Plantation> = state
         .plantations
@@ -58,7 +56,7 @@ pub fn plan_relocate_main(
         .filter(|p| adjacent4(p.pos, main.pos))
         .filter(|p| p.hp >= params.mhp / 2)
         .filter(|p| !is_boosted(p.pos)) // не в ловушку (клетка быстро завершится)
-        .filter(|p| turns_until_complete(p, state, params) >= min_buffer)
+        .filter(|p| turns_until_complete(p, state, params) > turns_until_complete(main, state, params))
         .filter(|p| !storm_threatens(p.pos, &storm_preds))
         .collect();
 

@@ -26,9 +26,9 @@ distance_from_main = 5.0
 
 [urgency]
 critical_repair = 1.0
-unfinished_construction = 0.7
-new_build_boost = 0.5
-new_build_normal = 0.4
+unfinished_construction = 0.95
+new_build_boost = 0.90
+new_build_normal = 0.85
 beaver_hunt = 0.9
 maintenance_repair = 0.2
 
@@ -83,7 +83,7 @@ only_endgame_vs_leader = true
 # 10 — relocate когда клетка на ~50%. Бывший ЦУ (обычная плантация) живёт
 # ещё 10 ходов, за это время стройки вокруг него успевают дозреть — сеть
 # не рвётся каскадом после его смерти (см. «collapsed due to isolation»).
-main_critical_completion_turns = 13
+main_critical_completion_turns = 6
 main_critical_hp_fraction = 0.2
 min_buffer_before_limit = 1
 

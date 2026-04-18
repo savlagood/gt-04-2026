@@ -219,7 +219,22 @@ pub fn score_cell_value(
     let mut main_adj_bonus = 0.0;
     if let Some(main) = state.main() {
         if manhattan(cell, main.pos) == 1 {
-            main_adj_bonus = 5000.0; // Priority to secure 4-adj to main for safe relocation
+            let mut escape_routes_count = 0;
+            for (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
+                let adj_pos = Pos::new(main.pos.x + dx, main.pos.y + dy);
+                if adj_pos == cell {
+                    continue;
+                }
+                if state.plantation_at(adj_pos).is_some() || our_constructions.contains(&adj_pos) {
+                    escape_routes_count += 1;
+                }
+            }
+
+            if escape_routes_count == 0 {
+                main_adj_bonus = 5000.0; // Priority to secure 1st 4-adj to main for safe relocation
+            } else {
+                main_adj_bonus = -5000.0; // Penalty to avoid trapping the main base with more than 1 surrounding base
+            }
         }
     }
 
@@ -274,13 +289,17 @@ pub fn generate_build_tasks(
         } else {
             (cfg.urgency.unfinished_construction, 0.0)
         };
-        tasks.push(Task {
-            kind: TaskKind::Build,
-            target: c.pos,
-            utility: cell_score + extra + 2_000.0 + remaining as f64 * 10.0,
-            urgency,
-            required_effort: (remaining as f64 / params.cs as f64).ceil().max(1.0),
-        });
+        
+        // Генерируем до 3 задач на одну стройку, чтобы позволить фокус-огонь (совместную постройку)
+        for _ in 0..3 {
+            tasks.push(Task {
+                kind: TaskKind::Build,
+                target: c.pos,
+                utility: cell_score + extra + 2_000.0 + remaining as f64 * 10.0,
+                urgency,
+                required_effort: (remaining as f64 / params.cs as f64).ceil().max(1.0),
+            });
+        }
     }
 
     // 3. Лимит: если мы уже на границе и старейшая плантация — ЦУ,
@@ -290,10 +309,8 @@ pub fn generate_build_tasks(
         return tasks;
     }
 
-    // 4. Новые стройки — только на «лишних» авторов сверх потребности
-    //    в добивании существующих. Это удерживает сеть расширяющейся,
-    //    не разбрасывая всех на новые клетки одновременно.
-    let slots = useful_count.saturating_sub(tasks.len());
+    // 4. Новые стройки — утилизируем 100% авторов (снимаем лимиты)
+    let slots = useful_count;
     if slots == 0 {
         return tasks;
     }

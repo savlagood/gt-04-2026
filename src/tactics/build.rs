@@ -273,12 +273,21 @@ pub fn generate_build_tasks(
         for i in 0..for_existing {
             let c = our_builds[i % our_builds.len()];
             let remaining = (50 - c.progress).max(1);
-            let utility = score_cell_value(c.pos, state, params, cfg, phase);
+            let cell_score = score_cell_value(c.pos, state, params, cfg, phase);
+            // Если пропустить этот ход — сервер применяет DS немедленно (шаг 8).
+            // При progress ≤ DS стройка умрёт в тот же ход. Поднимаем приоритет
+            // до уровня критического ремонта, чтобы конкурировать на равных.
+            let at_risk = c.progress <= params.ds;
+            let (urgency, extra) = if at_risk {
+                (cfg.urgency.critical_repair, 100_000.0)
+            } else {
+                (cfg.urgency.unfinished_construction, 0.0)
+            };
             tasks.push(Task {
                 kind: TaskKind::Build,
                 target: c.pos,
-                utility: utility + 2_000.0 + remaining as f64 * 10.0,
-                urgency: cfg.urgency.unfinished_construction,
+                utility: cell_score + extra + 2_000.0 + remaining as f64 * 10.0,
+                urgency,
                 required_effort: (remaining as f64 / params.cs as f64).ceil().max(1.0),
             });
         }

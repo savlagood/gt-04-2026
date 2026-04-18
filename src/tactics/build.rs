@@ -169,22 +169,15 @@ pub fn score_cell_value(
         }
     }
 
-    // Compactness bonus считает **только стабильных** соседей: плантации с
-    // cell terraform < 80% (прожиют ещё ≥ 4 ходов) и стройки. «Обречённый»
-    // сосед (cell ≥ 80%) скоро исчезнет, и ставить ему в соседство рискованно
-    // — новая плантация рискует стать isolated, каскадом умереть
-    // («collapsed due to isolation» из server_events).
+    // Compactness bonus считает **только стабильных** соседей: стройки и
+    // плантации, не изолированные от сети (is_isolated=false — авторитетный
+    // серверный флаг). Terraform progress не является признаком гибели
+    // плантации: она умирает только от изоляции, а не от завершения terraform.
     let is_stable_neighbor = |p: Pos| -> bool {
         if our_constructions.contains(&p) {
             return true;
         }
-        if !our_positions.contains(&p) {
-            return false;
-        }
-        match state.cell_at(p) {
-            Some(c) => c.terraformation_progress < 80,
-            None => true,
-        }
+        state.plantation_at(p).map(|pl| !pl.is_isolated).unwrap_or(false)
     };
     let stable_neighbors: i32 = [(1, 0), (-1, 0), (0, 1), (0, -1)]
         .iter()
@@ -248,8 +241,12 @@ pub fn generate_build_tasks(
             continue;
         }
         let exp_dmg = predict_construction_damage(c, state, params);
-        if (params.cs - exp_dmg).max(0) == 0 {
-            continue; // под ударом — прогресс не будет, бросаем в этот ход
+        // Бросаем только если стройка умрёт в этот ход даже с нашей помощью.
+        // Строить при exp_dmg > cs всё равно выгоднее (net хуже на 5, но не 0),
+        // и build-команда предотвращает деградацию по DS (task.md: деградация
+        // только если «не было прогресса стройки», т.е. не было команды).
+        if c.progress + params.cs <= exp_dmg {
+            continue;
         }
         our_builds.push(c);
     }
@@ -265,14 +262,13 @@ pub fn generate_build_tasks(
     //    чтобы каждая получила ~равное число «помощников». Это резко
     //    ускоряет рост сети в первые ходы.
     if !our_builds.is_empty() {
-        // Оставляем 1 автора на новую стройку (если много свободных),
-        // остальных разгоняем по активным.
-        let spare_for_new = if useful_count > our_builds.len() + 1 {
-            useful_count - our_builds.len() * 2
+        // До 2 авторов на активную стройку для ускорения, но ≥1 слот
+        // всегда резервируем для запуска новых стро ек.
+        let for_existing = if useful_count <= 1 {
+            useful_count
         } else {
-            0
+            (our_builds.len() * 2).min(useful_count - 1)
         };
-        let for_existing = useful_count.saturating_sub(spare_for_new);
 
         for i in 0..for_existing {
             let c = our_builds[i % our_builds.len()];
